@@ -1,0 +1,368 @@
+import { useState, useEffect, useMemo } from 'react'
+import { initialPlayers } from './mockData.js'
+import './App.css'
+
+function ThemeToggle({ darkMode, onToggle }) {
+  return (
+    <button className="history-tag" style={{ background: '#f5b041' }} onClick={() => onToggle(!darkMode)}>
+      {darkMode ? '🌙 Modo oscuro' : '☀️ Modo claro'}
+    </button>
+  );
+}
+
+function SearchHistory({ history, onSelectSearch, onClearHistory }) {
+  return (
+    <div className="history-pane">
+      <div className="history-pane__header">
+        <span>HISTORIAL DE BÚSQUEDA</span>
+        {history.length > 0 && (
+          <span onClick={onClearHistory} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Limpiar</span>
+        )}
+      </div>
+      <div className="history-pane__list">
+        {history.map((term, index) => (
+          <button key={index} className="history-tag" onClick={() => onSelectSearch(term)}>
+            {term}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SearchBar({ value, onChange, onClear, resultsCount }) {
+  return (
+    <div className="search-block">
+      <span className="search-block__label">BUSCAR JUGADORES</span>
+      <div className="search-group">
+        <div className="search-group__wrapper">
+          <span className="search-group__icon">🔍</span>
+          <input
+            type="text"
+            className="search-group__input"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Escribe el nombre de un jugador..."
+          />
+          {value && <button className="search-group__clear-inside" onClick={onClear}>×</button>}
+        </div>
+        <button className="btn-clear-outside" onClick={onClear}>Limpiar</button>
+      </div>
+    </div>
+  );
+}
+
+function StatsPanel({ stats, favoritesCount }) {
+  return (
+    <div className="stats-grid">
+      <div className="stat-box--yellow">
+        <div className="stat-box__label">JUGADORES EN TABLA</div>
+        <div className="stat-box__value">{stats.total}</div>
+        <div className="stat-box__badge">Favoritos: {favoritesCount}</div>
+      </div>
+
+      <div className="stat-box--dark">
+        <div className="stat-box__label">PROMEDIO DE GOLES</div>
+        <div className="stat-box__value" style={{ fontSize: '1.7rem' }}>{stats.avgGoals}</div>
+      </div>
+
+      <div className="stat-box--dark">
+        <div className="stat-box__label">PROMEDIO DE EDAD</div>
+        <div className="stat-box__value" style={{ fontSize: '1.7rem' }}>{stats.avgAge} años</div>
+      </div>
+
+      <div className="stat-box--dark" style={{ gridColumn: 'span 2' }}>
+        <div className="stat-box__label">MÁXIMO GOLEADOR</div>
+        <div className="stat-box__subtext" style={{ fontSize: '1.4rem', marginTop: '10px' }}>
+          {stats.topScorer ? stats.topScorer.name : 'N/A'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlayerRow({ player, index, onClick, isFavorite, onToggleFavorite, rowColors }) {
+  let colorClass = '';
+  if (rowColors === 'pair' && (index + 1) % 2 === 0) colorClass = 'grid-table__tr--pair';
+  if (rowColors === 'odd' && (index + 1) % 2 !== 0) colorClass = 'grid-table__tr--odd';
+
+  return (
+    <tr className={`grid-table__tr ${colorClass}`} onClick={() => onClick(player)}>
+      <td className="grid-table__td">
+        <button className="btn-fav-star" onClick={(e) => { e.stopPropagation(); onToggleFavorite(player.id); }}>
+          {isFavorite ? '★' : '☆'}
+        </button>
+      </td>
+      <td className="grid-table__td"><strong>{player.name}</strong></td>
+      <td className="grid-table__td" style={{ color: '#f37021', fontWeight: 'bold' }}>{player.club}</td>
+      <td className="grid-table__td">{player.position}</td>
+      <td className="grid-table__td">{player.country}</td>
+      <td className="grid-table__td">{player.age}</td>
+      <td className="grid-table__td">{player.goals}</td>
+      <td className="grid-table__td">{player.assists}</td>
+      <td className="grid-table__td"><span style={{ background: '#2e4053', padding: '3px 8px', borderRadius: '4px', color: '#fff' }}>{player.rating}</span></td>
+    </tr>
+  );
+}
+
+function PlayerTable({ players, onRowClick, onSort, sortConfig, favorites, onToggleFavorite, rowColors }) {
+  const headings = [
+    { key: 'name', label: 'Jugador' },
+    { key: 'club', label: 'Club' },
+    { key: 'position', label: 'Posición' },
+    { key: 'country', label: 'País' },
+    { key: 'age', label: 'Edad' },
+    { key: 'goals', label: 'Goles' },
+    { key: 'assists', label: 'Asistencias' },
+    { key: 'rating', label: 'Rating' }
+  ];
+
+  return (
+    <div className="table-scroll">
+      <table className="grid-table">
+        <thead>
+          <tr>
+            <th className="grid-table__th">FAV</th>
+            {headings.map((h) => (
+              <th key={h.key} className="grid-table__th" onClick={() => onSort(h.key)}>
+                {h.label}
+                <span className="grid-table__sort-btn">
+                  {sortConfig.key === h.key && sortConfig.direction === 'asc' ? '▲' : '▼'}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {players.map((player, idx) => (
+            <PlayerRow
+              key={player.id}
+              player={player}
+              index={idx}
+              onClick={onRowClick}
+              isFavorite={favorites.includes(player.id)}
+              onToggleFavorite={onToggleFavorite}
+              rowColors={rowColors}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Pagination({ currentPage, totalPages, onPageChange, itemsPerPage, onItemsPerPageChange, totalItems }) {
+  const start = (currentPage - 1) * itemsPerPage + 1;
+  const end = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <div className="footer-row">
+      <div>
+        <span>Mostrando {start}-{end} de {totalItems} registros</span>
+        <span style={{ margin: '0 15px' }}>|</span>
+        <span>MOSTRAR </span>
+        <select className="select-pages" value={itemsPerPage} onChange={(e) => onItemsPerPageChange(Number(e.target.value))}>
+          <option value={5}>5 por página</option>
+          <option value={10}>10 por página</option>
+          <option value={20}>20 por página</option>
+        </select>
+      </div>
+
+      <div className="pagination-nav">
+        <button className="pagination-nav__btn" onClick={() => onPageChange(1)} disabled={currentPage === 1}>«</button>
+        <button className="pagination-nav__btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>‹</button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          <button key={p} className={`pagination-nav__btn ${currentPage === p ? 'pagination-nav__btn--active' : ''}`} onClick={() => onPageChange(p)}>
+            {p}
+          </button>
+        ))}
+        <button className="pagination-nav__btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
+        <button className="pagination-nav__btn" onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages}>»</button>
+      </div>
+    </div>
+  );
+}
+
+function Modal({ isOpen, onClose, player, isFavorite, onToggleFavorite }) {
+  if (!isOpen || !player) return null;
+  return (
+    <div className="modal-mask" onClick={onClose}>
+      <div className="modal-wrapper" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-wrapper__close" onClick={onClose}>×</button>
+        <h2 style={{ margin: '0 0 15px 0' }}>{player.name}</h2>
+        <p><strong>Club:</strong> {player.club}</p>
+        <p><strong>Posición:</strong> {player.position}</p>
+        <p><strong>País:</strong> {player.country}</p>
+        <p><strong>Edad:</strong> {player.age} años</p>
+        <p><strong>Goles:</strong> {player.goals}</p>
+        <p><strong>Asistencias:</strong> {player.assists}</p>
+        <p><strong>Puntuación de Rating:</strong> {player.rating}</p>
+        <button
+          className="btn-fav-star"
+          style={{ marginTop: '20px', padding: '10px 20px', fontSize: '1rem' }}
+          onClick={() => onToggleFavorite(player.id)}
+        >
+          {isFavorite ? '★ Eliminar de Favoritos' : '☆ Agregar a Favoritos'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [rowColors, setRowColors] = useState('none');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'none' });
+  const [darkMode, setDarkMode] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme) setDarkMode(JSON.parse(savedTheme));
+    const savedFavs = localStorage.getItem('favorites');
+    if (savedFavs) setFavorites(JSON.parse(savedFavs));
+    const savedHist = localStorage.getItem('searchHistory');
+    if (savedHist) setSearchHistory(JSON.parse(savedHist));
+    const savedShowFavs = localStorage.getItem('showOnlyFavorites');
+    if (savedShowFavs) setShowOnlyFavorites(JSON.parse(savedShowFavs));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('showOnlyFavorites', JSON.stringify(showOnlyFavorites));
+    setCurrentPage(1);
+  }, [showOnlyFavorites]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (debouncedSearch && debouncedSearch.trim().length > 2) {
+      setSearchHistory((prev) => {
+        const filtered = prev.filter((s) => s !== debouncedSearch);
+        const updated = [debouncedSearch, ...filtered].slice(0, 5);
+        localStorage.setItem('searchHistory', JSON.stringify(updated));
+        return updated;
+      });
+    }
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  const handleToggleFavorite = (id) => {
+    const updated = favorites.includes(id) ? favorites.filter((f) => f !== id) : [...favorites, id];
+    setFavorites(updated);
+    localStorage.setItem('favorites', JSON.stringify(updated));
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key !== key) return { key, direction: 'asc' };
+      if (prev.direction === 'asc') return { key, direction: 'desc' };
+      return { key: null, direction: 'none' };
+    });
+  };
+
+  const filteredPlayers = useMemo(() => {
+    let result = initialPlayers.map(p => ({ ...p }));
+    if (debouncedSearch) {
+      result = result.filter((p) => p.name.toLowerCase().includes(debouncedSearch.toLowerCase()));
+    }
+    if (showOnlyFavorites) {
+      result = result.filter((p) => favorites.includes(p.id));
+    }
+    if (sortConfig.key && sortConfig.direction !== 'none') {
+      result.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [debouncedSearch, sortConfig, showOnlyFavorites, favorites]);
+
+  const stats = useMemo(() => {
+    const total = filteredPlayers.length;
+    const avgAge = total ? (filteredPlayers.reduce((acc, p) => acc + p.age, 0) / total).toFixed(0) : 0;
+    const avgGoals = total ? (filteredPlayers.reduce((acc, p) => acc + p.goals, 0) / total).toFixed(1) : 0;
+    const topScorer = total ? [...filteredPlayers].sort((a, b) => b.goals - a.goals)[0] : null;
+    return { total, avgAge, avgGoals, topScorer };
+  }, [filteredPlayers]);
+
+  const totalPages = Math.ceil(filteredPlayers.length / itemsPerPage) || 1;
+  const paginatedPlayers = filteredPlayers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  return (
+    <div>
+      <div className="header-banner">
+        <div>
+          <h5 className="header-banner__subtitle">TOP CLUB SOCCER</h5>
+          <h1 className="header-banner__title">Dashboard de Jugadores</h1>
+          <p className="header-banner__desc">Gestiona tus estrellas favoritas, analiza estadísticas y descubre talentos.</p>
+        </div>
+        <ThemeToggle darkMode={darkMode} onToggle={setDarkMode} />
+      </div>
+
+      <div className="app">
+        <div className="dashboard-panel">
+          <SearchBar value={searchTerm} onChange={setSearchTerm} onClear={() => setSearchTerm('')} resultsCount={filteredPlayers.length} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1.5fr', gap: '30px', alignItems: 'center', marginBottom: '25px' }}>
+            <div className="action-row">
+              <button className="btn-action" onClick={() => setRowColors('pair')}>Pintar filas pares</button>
+              <button className="btn-action" onClick={() => setRowColors('odd')}>Pintar filas impares</button>
+              <button className="btn-action" onClick={() => setRowColors('none')}>Limpiar color</button>
+              <button className="btn-action" style={{ background: showOnlyFavorites ? '#f5b041' : '' }} onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}>
+                {showOnlyFavorites ? '★ Mostrar todos' : '☆ Solo favoritos'}
+              </button>
+            </div>
+            <SearchHistory history={searchHistory} onSelectSearch={setSearchTerm} onClearHistory={() => setSearchHistory([])} />
+          </div>
+
+          <StatsPanel stats={stats} favoritesCount={favorites.length} />
+
+          <PlayerTable
+            players={paginatedPlayers}
+            onRowClick={(p) => { setSelectedPlayer(p); setIsModalOpen(true); }}
+            onSort={handleSort}
+            sortConfig={sortConfig}
+            favorites={favorites}
+            onToggleFavorite={handleToggleFavorite}
+            rowColors={rowColors}
+          />
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+            totalItems={filteredPlayers.length}
+          />
+        </div>
+      </div>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        player={selectedPlayer} 
+        isFavorite={selectedPlayer ? favorites.includes(selectedPlayer.id) : false}
+        onToggleFavorite={handleToggleFavorite}
+      />
+    </div>
+  );
+}
+
+export default App
