@@ -308,7 +308,7 @@ function App() {
     <div>
       <div className="header-banner">
         <div>
-          <h5 className="header-banner__subtitle">TOP CLUB SOCCER</h5>
+          <h5 className="header-banner__subtitle">LIGA DE FUTBOL</h5>
           <h1 className="header-banner__title">Dashboard de Jugadores</h1>
           <p className="header-banner__desc">Gestiona tus estrellas favoritas, analiza estadísticas y descubre talentos.</p>
         </div>
