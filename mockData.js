@@ -9,5 +9,5 @@ window.initialPlayers = [
   { id: 8, name: "Rodri", club: "Manchester City", position: "Mediocampista", country: "España", age: 27, goals: 8, assists: 9, rating: 9.3 },
   { id: 9, name: "Vinícius Júnior", club: "Real Madrid", position: "Delantero", country: "Brasil", age: 23, goals: 15, assists: 5, rating: 8.6 },
   { id: 10, name: "Mohamed Salah", club: "Liverpool", position: "Delantero", country: "Egipto", age: 31, goals: 18, assists: 10, rating: 8.4 },
-  { id: 11, name: "Dayro Moreno", club: "Once", position: "Delantero", country: "Colombia", age: 87, goals: 1000, assists: 1000, rating: 9.9 }
+  { id: 11, name: "Dayro Moreno", club: "Once", position: "Delantero", country: "Colombia", age: 40, goals: 10, assists: 1000, rating: 9.9 }
 ];
