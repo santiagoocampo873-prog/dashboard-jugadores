@@ -281,6 +281,7 @@ body {
   background-color: #ffffff;
   color: #212529;
   transition: transform 0.2s;
+  cursor: pointer;
 }
 
 .grid-table__tr:hover {
